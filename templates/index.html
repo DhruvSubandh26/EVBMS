@@ -1,159 +1,961 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Battery Health Dashboard</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
-            min-height: 100vh;
-        }
-        header {
-            background: linear-gradient(135deg, #1e3a5f, #0e7490);
-            padding: 24px 32px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        header h1 { font-size: 1.8rem; font-weight: 700; }
-        header p { font-size: 0.9rem; color: #a5f3fc; margin-top: 4px; }
-        .icon { font-size: 2rem; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart BMS Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-from: #030810;
+    --bg-to: #0a0520;
+    --g-cyan: #00f5ff;
+    --g-blue: #0066ff;
+    --g-purple: #aa00ff;
+    --g-pink: #ff0077;
+    --g-teal: #00ffcc;
+    --g-green: #00ff88;
+    --g-yellow: #ffee00;
+    --g-orange: #ff8800;
+    --g-red: #ff2255;
+    --warn: #ffcc00;
+    --danger: #ff3355;
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
-            padding: 24px 32px;
-        }
-        .stat-card {
-            background: #1e293b;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #334155;
-            text-align: center;
-        }
-        .stat-card .value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #38bdf8;
-        }
-        .stat-card .label {
-            font-size: 0.8rem;
-            color: #94a3b8;
-            margin-top: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
+    /* Gradient text tokens */
+    --grad-accent: linear-gradient(135deg, #00f5ff, #00ff88);
+    --grad-volt: linear-gradient(135deg, #00ccff, #aa44ff);
+    --grad-curr: linear-gradient(135deg, #00ff88, #00ccff);
+    --grad-temp: linear-gradient(135deg, #ff8800, #ff2255);
+    --grad-health: linear-gradient(90deg, #00ff88, #00ccff, #aa44ff);
+    --grad-warn: linear-gradient(135deg, #ffee00, #ff8800);
+    --grad-status-ok: linear-gradient(135deg, #00ffcc, #00aaff);
+    --grad-status-warn: linear-gradient(135deg, #ffee00, #ff8800);
+    --grad-status-bad: linear-gradient(135deg, #ff4466, #aa0033);
 
-        .batteries-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            padding: 0 32px 8px;
-        }
-        .badge {
-            background: #0e7490;
-            color: #e0f2fe;
-            border-radius: 999px;
-            padding: 4px 12px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
+    --glow-cyan: 0 0 24px rgba(0,245,255,0.55);
+    --glow-green: 0 0 24px rgba(0,255,136,0.5);
+    --glow-purple: 0 0 20px rgba(170,0,255,0.4);
+    --glow-orange: 0 0 20px rgba(255,136,0,0.5);
+  }
 
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
-            gap: 24px;
-            padding: 16px 32px 40px;
-        }
-        .chart-card {
-            background: #1e293b;
-            border-radius: 12px;
-            border: 1px solid #334155;
-            overflow: hidden;
-        }
-        .chart-card h3 {
-            padding: 16px 20px;
-            font-size: 1rem;
-            color: #bae6fd;
-            border-bottom: 1px solid #334155;
-        }
-        .chart-card img {
-            width: 100%;
-            display: block;
-        }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .section-title {
-            padding: 8px 32px 0;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: #64748b;
-        }
-    </style>
+  body {
+    background: linear-gradient(145deg, #030810 0%, #07031a 40%, #030d12 100%);
+    font-family: 'Share Tech Mono', monospace;
+    color: #c8eeff;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Ambient background blobs */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 600px 400px at 15% 50%, rgba(0,100,255,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 500px 300px at 80% 20%, rgba(170,0,255,0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 400px 400px at 60% 90%, rgba(0,255,136,0.05) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.06) 2px,
+      rgba(0,0,0,0.06) 4px
+    );
+    pointer-events: none;
+    z-index: 101;
+  }
+
+  /* ===== TOPBAR ===== */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 28px;
+    border-bottom: 1px solid rgba(0,200,255,0.15);
+    background: linear-gradient(90deg,
+      rgba(0,100,255,0.12) 0%,
+      rgba(170,0,255,0.08) 50%,
+      rgba(0,255,200,0.1) 100%);
+    position: relative;
+    z-index: 10;
+  }
+
+  .topbar .brand {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: 4px;
+    background: linear-gradient(90deg, #00f5ff, #aa44ff, #00ffcc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 10px rgba(0,245,255,0.5));
+  }
+
+  .topbar .time {
+    font-size: 13px;
+    background: linear-gradient(90deg, #00ccff, #88aaff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 2px;
+  }
+
+  .topbar .status-dots {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .topbar .sys-label {
+    font-size: 10px;
+    background: linear-gradient(90deg, #00ffaa, #00ccff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 2px;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00f5ff, #00ff88);
+    box-shadow: 0 0 8px rgba(0,245,255,0.7);
+    animation: pulse 2s infinite;
+  }
+
+  .dot.warn {
+    background: linear-gradient(135deg, #ffee00, #ff8800);
+    box-shadow: 0 0 8px rgba(255,200,0,0.7);
+    animation-delay: 0.5s;
+  }
+  .dot.off {
+    background: #223;
+    box-shadow: none;
+    animation: none;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  /* ===== LAYOUT ===== */
+  .dashboard {
+    display: grid;
+    grid-template-columns: 320px 1fr 260px;
+    grid-template-rows: 1fr auto;
+    gap: 14px;
+    padding: 14px 24px;
+    height: calc(100vh - 52px);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ===== PANEL BASE ===== */
+  .panel {
+    background: linear-gradient(145deg, rgba(10,18,40,0.95) 0%, rgba(5,10,28,0.98) 100%);
+    border: 1px solid rgba(0,180,255,0.2);
+    border-radius: 16px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    box-shadow:
+      0 4px 30px rgba(0,0,0,0.6),
+      inset 0 1px 0 rgba(0,200,255,0.1),
+      inset 0 0 40px rgba(0,50,120,0.08);
+  }
+
+  /* Gradient top border line */
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 8%; right: 8%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00f5ff, #aa44ff, #00ffcc, transparent);
+    opacity: 0.7;
+    border-radius: 2px;
+  }
+
+  /* Subtle inner corner glow */
+  .panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(0,180,255,0.04) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .panel:hover {
+    border-color: rgba(0,245,255,0.4);
+    box-shadow:
+      0 4px 30px rgba(0,0,0,0.6),
+      0 0 30px rgba(0,180,255,0.12),
+      inset 0 1px 0 rgba(0,245,255,0.15);
+  }
+
+  .panel-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 9.5px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    background: linear-gradient(90deg, #44ccff, #aa88ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ===== SOC GAUGE ===== */
+  .soc-panel {
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    background: linear-gradient(160deg, rgba(0,30,60,0.98) 0%, rgba(5,5,30,0.98) 100%);
+    border-color: rgba(0,200,255,0.25);
+  }
+
+  .gauge-wrap {
+    position: relative;
+    width: 260px;
+    height: 160px;
+  }
+
+  .gauge-svg { width: 100%; height: 100%; }
+
+  .gauge-center {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+
+  .soc-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 46px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #00f5ff 0%, #00ffaa 60%, #88ffcc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 12px rgba(0,245,255,0.6));
+    line-height: 1;
+  }
+
+  .soc-unit {
+    font-size: 14px;
+    background: linear-gradient(90deg, #44ccff, #88aaff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 2px;
+  }
+
+  .soc-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    background: linear-gradient(90deg, #00f5ff, #aa44ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(0,200,255,0.4));
+    margin-top: 6px;
+  }
+
+  /* ===== CENTER GRID ===== */
+  .center-col {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 14px;
+  }
+
+  /* Battery Health */
+  .health-panel {
+    background: linear-gradient(145deg, rgba(0,20,40,0.98) 0%, rgba(5,5,25,0.98) 100%);
+  }
+
+  .health-panel .health-bar-bg {
+    height: 30px;
+    background: linear-gradient(90deg, rgba(0,20,40,0.9), rgba(10,5,30,0.9));
+    border-radius: 8px;
+    border: 1px solid rgba(0,150,255,0.2);
+    overflow: hidden;
+    margin-top: 8px;
+    position: relative;
+  }
+
+  .health-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #0033aa, #0088ff, #00f5ff, #00ffaa);
+    box-shadow: 0 0 20px rgba(0,200,255,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: width 1.5s cubic-bezier(.4,0,.2,1);
+    position: relative;
+  }
+
+  .health-bar-fill::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #ffffff, #88ffff);
+    box-shadow: 0 0 10px #00f5ff, 0 0 20px rgba(0,245,255,0.5);
+    border-radius: 2px;
+  }
+
+  .health-pct {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #00f5ff, #aa44ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(0,200,255,0.4));
+    float: right;
+    margin-top: 4px;
+  }
+
+  /* Voltage / Current */
+  .vc-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .metric-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 16px 12px;
+  }
+
+  .metric-panel.volt-panel {
+    background: linear-gradient(145deg, rgba(0,10,40,0.98), rgba(20,0,50,0.98));
+    border-color: rgba(100,50,255,0.3);
+  }
+
+  .metric-panel.curr-panel {
+    background: linear-gradient(145deg, rgba(0,25,30,0.98), rgba(0,10,40,0.98));
+    border-color: rgba(0,200,255,0.3);
+  }
+
+  .metric-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 32px;
+    font-weight: 700;
+  }
+
+  .metric-val.volt-val {
+    background: linear-gradient(135deg, #44aaff, #cc66ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 10px rgba(100,100,255,0.6));
+  }
+
+  .metric-val.curr-val {
+    background: linear-gradient(135deg, #00ffcc, #00aaff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 10px rgba(0,200,255,0.6));
+  }
+
+  .metric-unit {
+    font-size: 11px;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #44ccff, #9988ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Temperature */
+  .temp-panel {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 14px 20px;
+    background: linear-gradient(145deg, rgba(30,10,5,0.98), rgba(10,5,20,0.98));
+    border-color: rgba(255,100,0,0.3);
+  }
+
+  .temp-panel::before {
+    background: linear-gradient(90deg, transparent, #ff8800, #ff2255, transparent);
+  }
+
+  .temp-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 36px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ffcc00, #ff6600, #ff2255);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 12px rgba(255,120,0,0.6));
+  }
+
+  .temp-unit {
+    font-size: 12px;
+    background: linear-gradient(90deg, #ffaa44, #ff6688);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .temp-range {
+    font-size: 11px;
+    background: linear-gradient(90deg, #ffaa66, #ff8899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-top: 4px;
+  }
+
+  /* ===== RIGHT COL ===== */
+  .right-col {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 14px;
+  }
+
+  /* Alert panel */
+  .alert-panel {
+    background: linear-gradient(145deg, rgba(30,18,0,0.98), rgba(15,5,20,0.98));
+    border-color: rgba(255,180,0,0.35);
+    box-shadow:
+      0 4px 30px rgba(0,0,0,0.6),
+      0 0 20px rgba(255,150,0,0.07),
+      inset 0 1px 0 rgba(255,200,0,0.12);
+  }
+
+  .alert-panel::before {
+    background: linear-gradient(90deg, transparent, #ffcc00, #ff6600, #ff0066, transparent);
+    opacity: 0.8;
+  }
+
+  .alert-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(90deg, #ffcc00, #ff6600);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .alert-title span {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffee00, #ff6600);
+    box-shadow: 0 0 10px #ffaa00;
+    animation: pulse 1s infinite;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .alert-list { list-style: none; }
+
+  .alert-item {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border-left: 3px solid #ffaa00;
+    background: linear-gradient(90deg, rgba(255,150,0,0.1), rgba(255,80,0,0.05));
+    font-size: 11.5px;
+    margin-bottom: 7px;
+    background-clip: padding-box;
+    color: #ffe588;
+    letter-spacing: 0.5px;
+  }
+
+  .alert-item.action {
+    border-left: 3px solid #00f5ff;
+    background: linear-gradient(90deg, rgba(0,200,255,0.1), rgba(0,150,255,0.05));
+    color: #88ffee;
+  }
+
+  .alert-item.danger {
+    border-left: 3px solid #ff3355;
+    background: linear-gradient(90deg, rgba(255,50,80,0.12), rgba(180,0,50,0.06));
+    color: #ffaaaa;
+  }
+
+  /* Status panel */
+  .status-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: linear-gradient(145deg, rgba(5,10,30,0.98), rgba(10,5,30,0.98));
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 11px;
+    background: linear-gradient(90deg, rgba(0,30,60,0.6), rgba(20,10,50,0.6));
+    border-radius: 8px;
+    border: 1px solid rgba(0,150,255,0.18);
+    font-size: 11px;
+  }
+
+  .status-key {
+    letter-spacing: 1px;
+    background: linear-gradient(90deg, #88ccff, #bb88ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .status-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  .status-val.ok {
+    background: linear-gradient(90deg, #00ffcc, #00aaff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 6px rgba(0,200,200,0.5));
+  }
+
+  .status-val.warn {
+    background: linear-gradient(90deg, #ffee00, #ff8800);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 6px rgba(255,150,0,0.5));
+  }
+
+  .status-val.bad {
+    background: linear-gradient(90deg, #ff5577, #ff0033);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 6px rgba(255,50,80,0.5));
+  }
+
+  /* ===== BOTTOM STRIP ===== */
+  .bottom-strip {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(90deg,
+      rgba(0,20,50,0.97) 0%,
+      rgba(15,5,40,0.97) 50%,
+      rgba(0,20,50,0.97) 100%);
+    border: 1px solid rgba(0,180,255,0.22);
+    border-radius: 12px;
+    padding: 10px 24px;
+    gap: 20px;
+    box-shadow:
+      0 2px 20px rgba(0,0,0,0.5),
+      inset 0 1px 0 rgba(0,200,255,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bottom-strip::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 5%; right: 5%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #00f5ff, #aa44ff, #00ffcc, transparent);
+    opacity: 0.5;
+  }
+
+  .strip-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .strip-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #66aaff, #aa88ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .strip-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    background: linear-gradient(135deg, #00f5ff, #aa44ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 6px rgba(0,200,255,0.4));
+  }
+
+  .divider {
+    width: 1px;
+    height: 30px;
+    background: linear-gradient(180deg, transparent, rgba(0,200,255,0.4), transparent);
+  }
+
+  /* Animated ring glow */
+  @keyframes rotate-glow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .soc-outer-ring {
+    animation: socFill 2s cubic-bezier(.4,0,.2,1) forwards;
+  }
+
+  @keyframes socFill {
+    from { stroke-dashoffset: 503; }
+    to { stroke-dashoffset: 402; }
+  }
+</style>
 </head>
 <body>
-    <header>
-        <div class="icon">🔋</div>
-        <div>
-            <h1>Battery Health Dashboard</h1>
-            <p>EV Battery Management System — AI Analysis</p>
-        </div>
-    </header>
 
-    <p class="section-title">Overview</p>
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="value">{{ stats.total_cycles }}</div>
-            <div class="label">Total Cycles</div>
-        </div>
-        <div class="stat-card">
-            <div class="value">{{ stats.total_cleaned_records }}</div>
-            <div class="label">Cleaned Records</div>
-        </div>
-        <div class="stat-card">
-            <div class="value">{{ stats.avg_soh }}</div>
-            <div class="label">Avg State of Health</div>
-        </div>
-        <div class="stat-card">
-            <div class="value">{{ stats.min_soh }}</div>
-            <div class="label">Min SOH</div>
-        </div>
-        <div class="stat-card">
-            <div class="value">{{ stats.max_soh }}</div>
-            <div class="label">Max SOH</div>
-        </div>
+  <div class="topbar">
+  <div class="brand">◈ SMART BMS</div>
+  <div class="time" id="clock">--:-- --</div>
+  <div class="status-dots">
+    <div class="dot"></div>
+    <div class="dot warn"></div>
+    <div class="dot off"></div>
+    <span class="sys-label">SYS ONLINE</span>
+  </div>
+</div>
+
+<!-- MAIN DASHBOARD -->
+<div class="dashboard">
+
+  <!-- LEFT: SOC GAUGE -->
+  <div class="panel soc-panel">
+    <div class="panel-label">Battery State of Charge</div>
+    <div class="gauge-wrap">
+      <svg class="gauge-svg" viewBox="0 0 260 160" id="socSvg">
+        <!-- Background arc -->
+        <path d="M 20 150 A 110 110 0 0 1 240 150" fill="none" stroke="rgba(0,40,100,0.45)" stroke-width="14" stroke-linecap="round"/>
+        <!-- Filled arc -->
+        <path id="socArc" d="M 20 150 A 110 110 0 0 1 240 150" fill="none" stroke="url(#socGrad)" stroke-width="14" stroke-linecap="round"
+          stroke-dasharray="345" stroke-dashoffset="345"/>
+        <defs>
+          <linearGradient id="socGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#0044ff"/>
+            <stop offset="35%" stop-color="#00aaff"/>
+            <stop offset="65%" stop-color="#00f5ff"/>
+            <stop offset="100%" stop-color="#00ffaa"/>
+          </linearGradient>
+        </defs>
+        <!-- Tick marks -->
+        <g id="ticks" stroke="#1a3a6a" stroke-width="1.5" stroke-linecap="round"></g>
+        <!-- Tick labels -->
+        <g id="tickLabels" fill="#4488bb" font-family="Share Tech Mono" font-size="10"></g>
+        <!-- Needle -->
+        <line id="needle" x1="130" y1="150" x2="130" y2="60" stroke="url(#needleGrad)" stroke-width="2.5" stroke-linecap="round"
+          transform-origin="130 150" style="transform: rotate(-90deg); transition: transform 2s cubic-bezier(.4,0,.2,1)"/>
+        <defs>
+          <linearGradient id="needleGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#aa44ff"/>
+            <stop offset="100%" stop-color="#00f5ff"/>
+          </linearGradient>
+        </defs>
+        <circle cx="130" cy="150" r="7" fill="none" stroke="url(#needleGrad)" stroke-width="2"/>
+        <circle cx="130" cy="150" r="4" fill="#00f5ff" opacity="0.9"/>
+      </svg>
+      <div class="gauge-center">
+        <div class="soc-value" id="socVal">--</div>
+        <div class="soc-unit">%</div>
+      </div>
+    </div>
+    <div class="soc-label">◈ BATTERY SOC</div>
+  </div>
+
+  <!-- CENTER COL -->
+  <div class="center-col">
+
+    <!-- Battery Health -->
+    <div class="panel health-panel">
+      <div class="panel-label">Battery Health</div>
+      <div class="health-bar-bg">
+        <div class="health-bar-fill" id="healthBar" style="width:0%"></div>
+      </div>
+      <div class="health-pct" id="healthPct">--</div>
     </div>
 
-    <p class="section-title">Batteries in Dataset</p>
-    <div class="batteries-list">
-        {% for b in stats.batteries %}
-        <span class="badge">{{ b }}</span>
-        {% endfor %}
+    <!-- Voltage + Current -->
+    <div class="vc-row">
+      <div class="panel metric-panel volt-panel">
+        <div class="panel-label" style="margin-bottom:6px">Voltage</div>
+        <div class="metric-val volt-val" id="voltVal">--.-</div>
+        <div class="metric-unit">VOLTS</div>
+      </div>
+      <div class="panel metric-panel curr-panel">
+        <div class="panel-label" style="margin-bottom:6px">Current</div>
+        <div class="metric-val curr-val" id="currVal">--.-</div>
+        <div class="metric-unit">AMPS</div>
+      </div>
     </div>
 
-    <p class="section-title" style="margin-top:20px;">Charts</p>
-    <div class="charts-grid">
-        <div class="chart-card">
-            <h3>📉 SOH Over Cycles</h3>
-            <img src="data:image/png;base64,{{ chart1 }}" alt="SOH Chart" />
-        </div>
-        <div class="chart-card">
-            <h3>⏱ Remaining Useful Life (RUL) Over Cycles</h3>
-            <img src="data:image/png;base64,{{ chart2 }}" alt="RUL Chart" />
-        </div>
-        <div class="chart-card">
-            <h3>⚡ Capacity vs Charge Transfer Resistance</h3>
-            <img src="data:image/png;base64,{{ chart3 }}" alt="Capacity vs Rct" />
-        </div>
-        <div class="chart-card">
-            <h3>📊 Capacity Distribution</h3>
-            <img src="data:image/png;base64,{{ chart4 }}" alt="Capacity Histogram" />
-        </div>
+    <!-- Temperature -->
+    <div class="panel temp-panel">
+      <div>
+        <div class="panel-label">Temperature</div>
+        <div class="temp-val" id="tempVal">--</div>
+        <div class="temp-unit">°C</div>
+        <div class="temp-range" id="tempRange">NORMAL RANGE: 20–45°C</div>
+      </div>
+      <svg viewBox="0 0 40 100" width="36" height="90" style="flex-shrink:0">
+        <defs>
+          <linearGradient id="thermGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ff2255"/>
+            <stop offset="100%" stop-color="#ff8800"/>
+          </linearGradient>
+        </defs>
+        <rect x="14" y="5" width="12" height="60" rx="6" fill="rgba(20,5,0,0.8)" stroke="rgba(255,100,0,0.3)" stroke-width="1"/>
+        <rect x="16" y="7" width="8" height="56" rx="4" id="thermFill" fill="url(#thermGrad)" style="transform-origin: bottom; transform: scaleY(0.5)"/>
+        <circle cx="20" cy="80" r="12" fill="url(#thermGrad)" opacity="0.9"/>
+        <circle cx="20" cy="80" r="7" fill="#ff6600"/>
+        <!-- Ticks -->
+        <line x1="10" y1="15" x2="14" y2="15" stroke="#ff6633" stroke-width="1" opacity="0.6"/>
+        <line x1="10" y1="30" x2="14" y2="30" stroke="#ff6633" stroke-width="1" opacity="0.6"/>
+        <line x1="10" y1="45" x2="14" y2="45" stroke="#ff6633" stroke-width="1" opacity="0.6"/>
+        <line x1="10" y1="60" x2="14" y2="60" stroke="#ff6633" stroke-width="1" opacity="0.6"/>
+        <text x="5" y="18" font-family="monospace" font-size="8" fill="#ffaa66">60</text>
+        <text x="5" y="33" font-family="monospace" font-size="8" fill="#ffaa66">45</text>
+        <text x="5" y="48" font-family="monospace" font-size="8" fill="#ffaa66">30</text>
+        <text x="5" y="63" font-family="monospace" font-size="8" fill="#ffaa66">15</text>
+      </svg>
     </div>
+
+  </div>
+
+  <!-- RIGHT COL -->
+  <div class="right-col">
+
+    <!-- Alerts -->
+    <div class="panel alert-panel">
+      <div class="alert-title"><span></span> ALERTS / ACTIONS</div>
+      <ul class="alert-list" id="alertList"></ul>
+    </div>
+
+    <!-- Status -->
+    <div class="panel status-panel">
+      <div class="panel-label">System Status</div>
+      <div class="status-row">
+        <span class="status-key">CHARGE MODE</span>
+        <span class="status-val ok">CC–CV</span>
+      </div>
+      <div class="status-row">
+        <span class="status-key">PROTECTION</span>
+        <span class="status-val ok">ACTIVE</span>
+      </div>
+      <div class="status-row">
+        <span class="status-key">BALANCING</span>
+        <span class="status-val warn">IN PROG</span>
+      </div>
+      <div class="status-row">
+        <span class="status-key">CELL FAULT</span>
+        <span class="status-val bad">CELL #3</span>
+      </div>
+      <div class="status-row">
+        <span class="status-key">COMM (IoT)</span>
+        <span class="status-val ok">ONLINE</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM STRIP -->
+  <div class="bottom-strip">
+    <div class="strip-item">
+      <div>
+        <div class="strip-label">CYCLES</div>
+        <div class="strip-val" id="cyclesVal">148</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="strip-item">
+      <div>
+        <div class="strip-label">CAPACITY</div>
+        <div class="strip-val">72 Ah</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="strip-item">
+      <div>
+        <div class="strip-label">POWER IN</div>
+        <div class="strip-val" id="powerVal">--.- W</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="strip-item">
+      <div>
+        <div class="strip-label">EST. RUNTIME</div>
+        <div class="strip-val">4.2 h</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="strip-item">
+      <div>
+        <div class="strip-label">PACK ID</div>
+        <div class="strip-val">BMS-04-A</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="strip-item">
+      <div>
+        <div class="strip-label">LAST SYNC</div>
+        <div class="strip-val" id="syncTime">--:--</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes().toString().padStart(2,'0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    document.getElementById('clock').textContent = `${(h%12||12).toString().padStart(2,'0')}:${m} ${ampm}`;
+    document.getElementById('syncTime').textContent = `${h.toString().padStart(2,'0')}:${m}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Draw SOC gauge ticks
+  function drawTicks() {
+    const tickG = document.getElementById('ticks');
+    const labelG = document.getElementById('tickLabels');
+    const cx = 130, cy = 150, r = 110;
+    const startAngle = -180, endAngle = 0;
+    for (let i = 0; i <= 10; i++) {
+      const pct = i / 10;
+      const angle = (startAngle + pct * (endAngle - startAngle)) * Math.PI / 180;
+      const isMajor = i % 2 === 0;
+      const r1 = isMajor ? r - 16 : r - 10;
+      const r2 = r + 4;
+      const x1 = cx + r1 * Math.cos(angle);
+      const y1 = cy + r1 * Math.sin(angle);
+      const x2 = cx + r2 * Math.cos(angle);
+      const y2 = cy + r2 * Math.sin(angle);
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+      line.setAttribute('stroke', isMajor ? '#1a4a8a' : '#0a2050');
+      line.setAttribute('stroke-width', isMajor ? '2' : '1');
+      tickG.appendChild(line);
+
+      if (isMajor) {
+        const lr = r - 28;
+        const lx = cx + lr * Math.cos(angle);
+        const ly = cy + lr * Math.sin(angle);
+        const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+        text.setAttribute('x', lx);
+        text.setAttribute('y', ly + 4);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('fill', '#4488cc');
+        text.setAttribute('font-size', '9');
+        text.textContent = i * 10;
+        labelG.appendChild(text);
+      }
+    }
+  }
+  drawTicks();
+async function fetchData() {
+  try {
+    const res = await fetch('/data');
+    const data = await res.json();
+
+    const soc = data.soc || 0;
+    const voltage = data.voltage || 0;
+    const current = data.current || 0;
+    const temp = data.temperature || 0;
+    const health = data.soh || 80;
+
+    // SOC update
+    document.getElementById('socVal').textContent = soc;
+    const angle = -90 + (soc / 100) * 180;
+    document.getElementById('needle').style.transform = `rotate(${angle}deg)`;
+    document.getElementById('socArc').setAttribute(
+      'stroke-dashoffset',
+      345 - (soc / 100) * 345
+    );
+
+    // Voltage + Current
+    document.getElementById('voltVal').textContent = voltage.toFixed(1);
+    document.getElementById('currVal').textContent = current.toFixed(1);
+
+    // Temperature
+    document.getElementById('tempVal').textContent = temp;
+
+    if (temp > 40) {
+      document.getElementById('tempRange').textContent = "⚠ HIGH TEMP WARNING";
+    } else {
+      document.getElementById('tempRange').textContent = "NORMAL RANGE: 20–45°C";
+    }
+
+    // Health (SOH)
+    document.getElementById('healthBar').style.width = health + '%';
+    document.getElementById('healthPct').textContent = health + '%';
+
+    // Power
+    document.getElementById('powerVal').textContent =
+      (voltage * current).toFixed(1) + ' W';
+
+    // 🔥 ALERT SYSTEM (ADD THIS PART)
+    const alertList = document.getElementById('alertList');
+    alertList.innerHTML = "";
+
+    if (data.alerts && data.alerts.length > 0) {
+      data.alerts.forEach(alert => {
+        const li = document.createElement('li');
+        li.className = "alert-item " + alert.type;
+        li.textContent = alert.msg;
+        alertList.appendChild(li);
+      });
+    } else {
+      alertList.innerHTML = "<li class='alert-item'>No Alerts</li>";
+    }
+
+  } catch (err) {
+    console.log("Error fetching data:", err);
+  }
+}
+
+// Refresh every 2 sec
+setInterval(fetchData, 2000);
+fetchData();
+</script>
 </body>
 </html>
