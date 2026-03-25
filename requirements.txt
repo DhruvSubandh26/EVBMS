@@ -1,8 +1,10 @@
 flask
+gunicorn
 numpy
-scikit-learn
 joblib
+scikit-learn
+psycopg2-binary
 pandas
-matplotlib
-seaborn
 xgboost
+matplotlib
+seaborn 
