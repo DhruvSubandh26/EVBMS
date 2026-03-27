@@ -3,6 +3,13 @@ import joblib
 import os
 import psycopg2
 from smart_optimizer import smart_optimize_v2
+import time 
+
+# ==============================
+# 🔥 TIME CONTROL FOR DB STORAGE
+# ==============================
+last_saved_time = 0
+SAVE_INTERVAL = 10   # seconds
 
 app = Flask(__name__)
 
@@ -46,13 +53,21 @@ charging_model = joblib.load("charging_time_model.pkl")
 
 latest_data = {}
 
+# ==============================
+# 🔥 HOME ROUTE
+# ==============================
+
 @app.route('/')
 def home():
     return render_template("index.html")
 
+# ==============================
+# 🔥 PREDICT ROUTE
+# ==============================
+
 @app.route('/predict', methods=['POST'])
 def predict():
-    global latest_data
+    global latest_data, last_saved_time
 
     data = request.get_json()
     print("Incoming Data:", data)
@@ -86,6 +101,7 @@ def predict():
         prediction_text = "Fallback Mode"
         hours, minutes = 0, 0
 
+    # 🔥 STORE FOR UI
     latest_data = {
         "voltage": voltage,
         "current": current,
@@ -98,7 +114,13 @@ def predict():
         "charging_time": f"{hours} hr {minutes} min"
     }
 
-    if conn:
+    # ==============================
+    # 🔥 TIME-BASED DB STORAGE
+    # ==============================
+
+    current_time = time.time()
+
+    if conn and (current_time - last_saved_time > SAVE_INTERVAL):
         try:
             cur.execute(
                 """
@@ -106,14 +128,31 @@ def predict():
                 (voltage, current, temperature, soc, soh, prediction, optimized_current, charging_time)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
-                (voltage, current, temperature, soc, soh, prediction_text, optimized_current, f"{hours} hr {minutes} min")
+                (
+                    voltage,
+                    current,
+                    temperature,
+                    float(soc),
+                    float(soh),
+                    prediction_text,
+                    float(optimized_current),
+                    f"{hours} hr {minutes} min"
+                )
             )
             conn.commit()
+
+            last_saved_time = current_time
+            print("✅ Stored in DB")
+
         except Exception as e:
             print("DB Insert Error:", e)
 
     return jsonify({"status": "received"})
 
+
+# ==============================
+# 🔥 GET DATA FOR UI
+# ==============================
 
 @app.route('/data')
 def get_data():
@@ -146,10 +185,18 @@ def get_data():
         return jsonify(latest_data)
 
 
+# ==============================
+# 🔥 TEST ROUTE
+# ==============================
+
 @app.route('/test')
 def test():
     return jsonify({"status": "Server running"})
 
+
+# ==============================
+# 🔥 RUN APP
+# ==============================
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
