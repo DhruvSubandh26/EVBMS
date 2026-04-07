@@ -47,6 +47,7 @@ else:
 # 🔥 LOAD ML MODELS
 # ==============================
 
+# soc_model NOT USED NOW (safe to keep or remove)
 soc_model = joblib.load("soc_model.pkl")
 soh_model = joblib.load("soh_model.pkl")
 charging_model = joblib.load("charging_time_model.pkl")
@@ -78,40 +79,47 @@ def predict():
 
     cycle = data.get("cycle", 100)
     capacity = data.get("capacity", 50)
-try:
-    # 🔥 DIRECT SOC CALCULATION (NO ML)
-    soc = ((voltage - 10.0) / 4.2) * 100
-    soc = max(0, min(100, soc))
-    soc = round(soc, 2)
 
-    soh = soh_model.predict([[cycle, voltage, temperature, capacity]])[0] * 100
-    charging_time = charging_model.predict([[soc, temperature, voltage]])[0]
+    try:
+        # 🔥 DIRECT SOC CALCULATION
+        soc = ((voltage - 10.0) / 4.2) * 100
+        soc = max(0, min(100, soc))
+        soc = round(soc, 2)
 
-    hours = int(charging_time)
-    minutes = int((charging_time - hours) * 60)
+        # ML MODELS
+        soh = soh_model.predict([[cycle, voltage, temperature, capacity]])[0] * 100
+        charging_time = charging_model.predict([[soc, temperature, voltage]])[0]
 
-    optimized_current, severity, alerts = smart_optimize_v2(soc, soh, temperature)
+        hours = int(charging_time)
+        minutes = int((charging_time - hours) * 60)
 
-    prediction_text = severity
+        optimized_current, severity, alerts = smart_optimize_v2(soc, soh, temperature)
 
-except Exception as e:
-    print("ML Error:", e)
+        prediction_text = severity
 
-    soc = ((voltage - 10.0) / 4.2) * 100
-    soc = max(0, min(100, soc))
-    soc = round(soc, 2)
+    except Exception as e:
+        print("ML Error:", e)
 
-    soh = 90
-    optimized_current = current
-    alerts = []
-    prediction_text = "Fallback Mode"
-    hours, minutes = 0, 0
+        # Fallback
+        soc = ((voltage - 10.0) / 4.2) * 100
+        soc = max(0, min(100, soc))
+        soc = round(soc, 2)
+
+        soh = 90
+        optimized_current = current
+        alerts = []
+        prediction_text = "Fallback Mode"
+        hours, minutes = 0, 0
+
+    # ==============================
     # 🔥 STORE FOR UI
+    # ==============================
+
     latest_data = {
         "voltage": voltage,
         "current": current,
         "temperature": temperature,
-        "soc": round(soc, 2),
+        "soc": soc,
         "soh": round(soh, 2),
         "alerts": alerts,
         "prediction": prediction_text,
@@ -120,7 +128,7 @@ except Exception as e:
     }
 
     # ==============================
-    # 🔥 TIME-BASED DB STORAGE
+    # 🔥 DB STORAGE
     # ==============================
 
     current_time = time.time()
@@ -156,7 +164,7 @@ except Exception as e:
 
 
 # ==============================
-# 🔥 GET DATA FOR UI
+# 🔥 GET DATA
 # ==============================
 
 @app.route('/data')
