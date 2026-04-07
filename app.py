@@ -78,19 +78,21 @@ def predict():
 
     cycle = data.get("cycle", 100)
     capacity = data.get("capacity", 50)
+try:
+    # 🔥 DIRECT SOC CALCULATION (NO ML)
+    soc = ((voltage - 10.0) / 4.2) * 100
+    soc = max(0, min(100, soc))
+    soc = round(soc, 2)
 
-    try:
-        soc = soc_model.predict([[cycle, voltage, temperature, capacity]])[0]
-        soh = soh_model.predict([[cycle, voltage, temperature, capacity]])[0] * 100
-        charging_time = charging_model.predict([[soc, temperature, voltage]])[0]
+    soh = soh_model.predict([[cycle, voltage, temperature, capacity]])[0] * 100
+    charging_time = charging_model.predict([[soc, temperature, voltage]])[0]
 
-        hours = int(charging_time)
-        minutes = int((charging_time - hours) * 60)
+    hours = int(charging_time)
+    minutes = int((charging_time - hours) * 60)
 
-        optimized_current, severity, alerts = smart_optimize_v2(soc, soh, temperature)
+    optimized_current, severity, alerts = smart_optimize_v2(soc, soh, temperature)
 
-        prediction_text = severity
-
+    prediction_text = severity
     except Exception as e:
         print("ML Error:", e)
 
