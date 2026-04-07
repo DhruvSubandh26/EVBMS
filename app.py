@@ -93,16 +93,19 @@ try:
     optimized_current, severity, alerts = smart_optimize_v2(soc, soh, temperature)
 
     prediction_text = severity
-    except Exception as e:
-        print("ML Error:", e)
 
-        soc = (voltage / 12.6) * 100
-        soh = 90
-        optimized_current = current
-        alerts = []
-        prediction_text = "Fallback Mode"
-        hours, minutes = 0, 0
+except Exception as e:
+    print("ML Error:", e)
 
+    soc = ((voltage - 10.0) / 4.2) * 100
+    soc = max(0, min(100, soc))
+    soc = round(soc, 2)
+
+    soh = 90
+    optimized_current = current
+    alerts = []
+    prediction_text = "Fallback Mode"
+    hours, minutes = 0, 0
     # 🔥 STORE FOR UI
     latest_data = {
         "voltage": voltage,
