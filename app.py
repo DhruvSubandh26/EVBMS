@@ -9,7 +9,7 @@ import time
 # 🔥 TIME CONTROL FOR DB STORAGE
 # ==============================
 last_saved_time = 0
-SAVE_INTERVAL = 10   # seconds
+SAVE_INTERVAL = 5   # seconds
 
 app = Flask(__name__)
 
